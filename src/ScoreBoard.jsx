@@ -5,25 +5,28 @@ const ScoreBoard = () => {
   const [games, setGames] = useState([]);
   const [poolData, setPoolData] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [week, setWeek] = useState(14);
-
-  // Fetch game data from ESPN
-  useEffect(() => {
-    if (!games.length) {
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&week=${week}`)
-        .then(async (response) => {
-          const score = await response.json();
-          const events = score.events;
-          console.log({events});
-          setGames(events);
-        });
-    }
-  }, [week]);
+  const [week, setWeek] = useState(null);
 
   // Handle file upload
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    // Extract week number from filename (e.g., "week_14.xls" -> 14)
+    const weekMatch = file.name.match(/week[_\s-]?(\d+)/i);
+    if (weekMatch) {
+      const extractedWeek = parseInt(weekMatch[1]);
+      setWeek(extractedWeek);
+      
+      // Fetch games for this week
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&week=${extractedWeek}`)
+        .then(async (response) => {
+          const score = await response.json();
+          const events = score.events;
+          console.log(`Loaded games for week ${extractedWeek}:`, events);
+          setGames(events);
+        });
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -47,14 +50,20 @@ const ScoreBoard = () => {
   const parsePoolData = (rawData) => {
     if (!rawData || rawData.length < 2) return;
 
+    // Row 0: Headers (participant names)
+    // Skip first two columns (empty and team names)
     const headers = rawData[0].slice(2);
     setParticipants(headers);
 
+    // Row 1: Total points (we can use this later for validation)
     const totalPoints = rawData[1].slice(2);
 
+    // Remaining rows: Team picks and confidence values
+    // Group teams by pairs (each game has 2 teams)
     const picks = {};
     const teamGameMap = {}; // Maps team name to game index
 
+    // Initialize participant picks
     headers.forEach(participant => {
       picks[participant] = [];
     });
@@ -189,7 +198,7 @@ const ScoreBoard = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h1>NFL Week {week} Score Tracker</h1>
+      <h1>NFL {week ? `Week ${week}` : 'Weekly'} Score Tracker</h1>
       
       {/* File Upload */}
       <div style={{ marginBottom: '20px' }}>
@@ -294,7 +303,7 @@ const ScoreBoard = () => {
           })}
         </div>
       ) : (
-        <p>Loading games...</p>
+        <p>Games will be loaded once a spreadsheet is uploaded.</p>
       )}
 
       {/* Debug: Pool Data */}
