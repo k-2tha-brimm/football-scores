@@ -50,14 +50,14 @@ const ScoreBoard = () => {
   const parsePoolData = (rawData) => {
     if (!rawData || rawData.length < 2) return;
 
-    // Row 1 (index 1): Participant names
+    // Row 0 (index 0): Participant names
     // Skip first two columns (empty and team names column header)
-    const headers = rawData[1].slice(2).filter(h => h && typeof h === 'string');
+    const headers = rawData[0].slice(2).filter(h => h && typeof h === 'string');
     setParticipants(headers);
 
     // Find first row with a text value in column 0 (team name)
     let firstTeamRow = -1;
-    for (let i = 2; i < rawData.length; i++) {
+    for (let i = 1; i < rawData.length; i++) {
       const cellValue = rawData[i][0];
       if (cellValue && typeof cellValue === 'string') {
         firstTeamRow = i;
@@ -69,6 +69,9 @@ const ScoreBoard = () => {
       console.error('No team data found in spreadsheet');
       return;
     }
+
+    console.log(`Found ${headers.length} participants`);
+    console.log(`First team row at index ${firstTeamRow}: ${rawData[firstTeamRow][0]}`);
 
     // Parse teams starting from firstTeamRow
     const picks = {};
@@ -316,7 +319,7 @@ const ScoreBoard = () => {
           })}
         </div>
       ) : (
-        <p>Games will be loaded once a spreadsheet is uploaded.</p>
+        <p>Loading games...</p>
       )}
 
       {/* Debug: Pool Data */}
