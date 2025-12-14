@@ -50,18 +50,29 @@ const ScoreBoard = () => {
   const parsePoolData = (rawData) => {
     if (!rawData || rawData.length < 2) return;
 
-    // Row 0: Headers (participant names)
-    // Skip first two columns (empty and team names)
-    const headers = rawData[0].slice(2);
+    // Row 1 (index 1): Participant names
+    // Skip first two columns (empty and team names column header)
+    const headers = rawData[1].slice(2).filter(h => h && typeof h === 'string');
     setParticipants(headers);
 
-    // Row 1: Total points (we can use this later for validation)
-    const totalPoints = rawData[1].slice(2);
+    // Find first row with a text value in column 0 (team name)
+    let firstTeamRow = -1;
+    for (let i = 2; i < rawData.length; i++) {
+      const cellValue = rawData[i][0];
+      if (cellValue && typeof cellValue === 'string') {
+        firstTeamRow = i;
+        break;
+      }
+    }
 
-    // Remaining rows: Team picks and confidence values
-    // Group teams by pairs (each game has 2 teams)
+    if (firstTeamRow === -1) {
+      console.error('No team data found in spreadsheet');
+      return;
+    }
+
+    // Parse teams starting from firstTeamRow
     const picks = {};
-    const teamGameMap = {}; // Maps team name to game index
+    const teamGameMap = {};
 
     // Initialize participant picks
     headers.forEach(participant => {
@@ -69,11 +80,12 @@ const ScoreBoard = () => {
     });
 
     let gameIndex = 0;
-    for (let i = 2; i < rawData.length; i++) {
+    for (let i = firstTeamRow; i < rawData.length; i++) {
       const row = rawData[i];
       const teamName = row[0];
       
-      if (!teamName) continue;
+      // Skip rows without team names
+      if (!teamName || typeof teamName !== 'string') continue;
 
       // Store which game this team belongs to
       teamGameMap[teamName] = gameIndex;
@@ -92,7 +104,8 @@ const ScoreBoard = () => {
       });
 
       // Every pair of rows is a new game
-      if (i % 2 === 1) {
+      // Count from firstTeamRow
+      if ((i - firstTeamRow) % 2 === 1) {
         gameIndex++;
       }
     }
